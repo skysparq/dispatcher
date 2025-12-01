@@ -15,7 +15,7 @@ type Source[T any] struct {
 	params *sqs.ReceiveMessageInput
 }
 
-func NewAwsSource[T any](queueUrl *string) *Source[T] {
+func NewAwsSource[T any](queueUrl *string, maxMessages int32) *Source[T] {
 	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		panic(fmt.Sprintf(`error creating AWS source: %v`, err))
@@ -24,7 +24,7 @@ func NewAwsSource[T any](queueUrl *string) *Source[T] {
 		client: sqs.NewFromConfig(cfg),
 		params: &sqs.ReceiveMessageInput{
 			QueueUrl:            queueUrl,
-			MaxNumberOfMessages: 10,
+			MaxNumberOfMessages: maxMessages,
 			WaitTimeSeconds:     20,
 		},
 	}
