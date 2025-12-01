@@ -1,4 +1,4 @@
-package receiver_test
+package dispatcher_test
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	dispatcher "github.com/skysparq/dispatcher"
+	"github.com/skysparq/dispatcher"
 )
 
 type TestProcessor struct {

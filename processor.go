@@ -1,4 +1,4 @@
-package receiver
+package dispatcher
 
 type Processor[T any] interface {
 	Incoming() chan T
