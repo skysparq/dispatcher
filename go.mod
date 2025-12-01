@@ -1,4 +1,4 @@
-module dispatcher
+module github.com/skysparq/dispatcher
 
 go 1.25
 
