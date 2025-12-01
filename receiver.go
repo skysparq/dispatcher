@@ -7,7 +7,6 @@ import (
 
 type Logger interface {
 	Errorf(format string, args ...interface{})
-	Infof(format string, args ...interface{})
 }
 
 type Receiver[T any] struct {
@@ -40,9 +39,7 @@ func (f *Receiver[T]) Start(ctx context.Context) {
 		if len(messages) == 0 {
 			continue
 		}
-		f.logger.Infof(`received %v messages`, len(messages))
 		f.processor.Incoming() <- messages
-		f.logger.Infof(`finished queueing %v messages`, len(messages))
 	}
 	f.processor.Close()
 }
