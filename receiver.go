@@ -27,6 +27,9 @@ func NewReceiver[T any](source Source[T], processor Processor[T], logger Logger)
 
 func (f *Receiver[T]) Start(ctx context.Context) {
 	for {
+		if ctx.Err() != nil {
+			break
+		}
 		messages, err := f.source.Receive(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
