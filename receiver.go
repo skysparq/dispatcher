@@ -20,10 +20,11 @@ type Receiver[T Payload[K], K int | string] struct {
 	stop       chan bool
 }
 
-func NewReceiver[T Payload[K], K int | string](source Source[T], processors map[K]Processor[T]) *Receiver[T, K] {
+func NewReceiver[T Payload[K], K int | string](source Source[T], processors map[K]Processor[T], logger Logger) *Receiver[T, K] {
 	return &Receiver[T, K]{
 		source:     source,
 		processors: processors,
+		logger:     logger,
 		stop:       make(chan bool),
 	}
 }
