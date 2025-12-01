@@ -8,6 +8,12 @@ func (l *StandardLogger) Errorf(format string, args ...interface{}) {
 	println(fmt.Sprintf(`ERROR `+format, args...))
 }
 
+func (l *StandardLogger) Infof(format string, args ...interface{}) {
+	println(fmt.Sprintf(`INFO `+format, args...))
+}
+
 type NoopLogger struct{}
 
 func (l *NoopLogger) Errorf(_ string, _ ...interface{}) {}
+
+func (l *NoopLogger) Infof(_ string, _ ...interface{}) {}

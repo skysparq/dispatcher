@@ -7,6 +7,7 @@ import (
 
 type Logger interface {
 	Errorf(format string, args ...interface{})
+	Infof(format string, args ...interface{})
 }
 
 type Payload[T int | string] interface {
@@ -43,6 +44,7 @@ func (f *Receiver[T, K]) Start(ctx context.Context) {
 		if len(messages) == 0 {
 			continue
 		}
+		f.logger.Infof(`received %v messages`, len(messages))
 		for _, message := range messages {
 			bucket := message.Bucket()
 			processor, ok := f.processors[bucket]
@@ -50,6 +52,7 @@ func (f *Receiver[T, K]) Start(ctx context.Context) {
 				processor.Incoming() <- message
 			}
 		}
+		f.logger.Infof(`finished queueing %v messages`, len(messages))
 	}
 	for _, processor := range f.processors {
 		processor.Close()
