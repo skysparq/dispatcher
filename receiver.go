@@ -10,27 +10,23 @@ type Logger interface {
 	Infof(format string, args ...interface{})
 }
 
-type Payload[T int | string] interface {
-	Bucket() T
+type Receiver[T any] struct {
+	source    Source[T]
+	processor Processor[T]
+	logger    Logger
+	stop      chan bool
 }
 
-type Receiver[T Payload[K], K int | string] struct {
-	source     Source[T]
-	processors map[K]Processor[T]
-	logger     Logger
-	stop       chan bool
-}
-
-func NewReceiver[T Payload[K], K int | string](source Source[T], processors map[K]Processor[T], logger Logger) *Receiver[T, K] {
-	return &Receiver[T, K]{
-		source:     source,
-		processors: processors,
-		logger:     logger,
-		stop:       make(chan bool),
+func NewReceiver[T any](source Source[T], processor Processor[T], logger Logger) *Receiver[T] {
+	return &Receiver[T]{
+		source:    source,
+		processor: processor,
+		logger:    logger,
+		stop:      make(chan bool),
 	}
 }
 
-func (f *Receiver[T, K]) Start(ctx context.Context) {
+func (f *Receiver[T]) Start(ctx context.Context) {
 	for {
 		messages, err := f.source.Receive(ctx)
 		if err != nil {
@@ -45,22 +41,12 @@ func (f *Receiver[T, K]) Start(ctx context.Context) {
 			continue
 		}
 		f.logger.Infof(`received %v messages`, len(messages))
-		for _, message := range messages {
-			bucket := message.Bucket()
-			processor, ok := f.processors[bucket]
-			if ok {
-				processor.Incoming() <- message
-			}
-		}
+		f.processor.Incoming() <- messages
 		f.logger.Infof(`finished queueing %v messages`, len(messages))
 	}
-	for _, processor := range f.processors {
-		processor.Close()
-	}
+	f.processor.Close()
 }
 
-func (f *Receiver[T, K]) WaitForStop() {
-	for _, processor := range f.processors {
-		processor.WaitForStop()
-	}
+func (f *Receiver[T]) WaitForStop() {
+	f.processor.WaitForStop()
 }

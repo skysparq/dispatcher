@@ -2,6 +2,7 @@ package dispatcher_test
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 type TestProcessor struct {
 	messages []string
-	msgChan  chan TestPayload
+	msgChan  chan []string
 	stop     chan bool
 	mutex    sync.Mutex
 }
@@ -19,14 +20,14 @@ type TestProcessor struct {
 func NewTestProcessor() *TestProcessor {
 	processor := &TestProcessor{
 		messages: make([]string, 0, 10),
-		msgChan:  make(chan TestPayload),
+		msgChan:  make(chan []string),
 		stop:     make(chan bool),
 	}
 	go processor.receiveLoop()
 	return processor
 }
 
-func (t *TestProcessor) Incoming() chan TestPayload {
+func (t *TestProcessor) Incoming() chan []string {
 	return t.msgChan
 }
 
@@ -48,62 +49,39 @@ func (t *TestProcessor) Messages() []string {
 
 func (t *TestProcessor) receiveLoop() {
 	for {
-		msg, ok := <-t.msgChan
+		messages, ok := <-t.msgChan
 		if !ok {
 			close(t.stop)
 			return
 		}
 		t.mutex.Lock()
-		t.messages = append(t.messages, msg.Message)
+		t.messages = append(t.messages, messages...)
+
 		t.mutex.Unlock()
 	}
 }
 
-type TestPayload struct {
-	Buck    string
-	Message string
-}
-
-func (t TestPayload) Bucket() string {
-	return t.Buck
-}
-
 func TestReceiver(t *testing.T) {
-	bucket1 := NewTestProcessor()
-	bucket2 := NewTestProcessor()
-	incoming := make(chan TestPayload)
+	processor := NewTestProcessor()
+	incoming := make(chan []string)
 	source := dispatcher.NewChanSource(incoming)
-	processors := map[string]dispatcher.Processor[TestPayload]{
-		`bucket1`: bucket1,
-		`bucket2`: bucket2,
-	}
-	r := dispatcher.NewReceiver(source, processors)
+	r := dispatcher.NewReceiver(source, processor, &dispatcher.StandardLogger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go r.Start(ctx)
 
-	incoming <- TestPayload{
-		Buck:    `bucket1`,
-		Message: `hello bucket1`,
-	}
-	incoming <- TestPayload{
-		Buck:    `bucket2`,
-		Message: `hello bucket2`,
-	}
-	incoming <- TestPayload{
-		Buck:    `bucket1`,
-		Message: `hello again bucket1`,
+	incoming <- []string{`hello 1`}
+	incoming <- []string{
+		`hello 2`,
+		`hello 3`,
 	}
 
 	time.Sleep(2000 * time.Millisecond)
 	cancel()
 	r.WaitForStop()
 
-	if size := len(bucket1.Messages()); size != 2 {
-		t.Fatalf(`expected 2 messages in bucket1 but got %v`, size)
-	}
-
-	if size := len(bucket2.Messages()); size != 1 {
-		t.Fatalf(`expected 1 messages in bucket2 but got %v`, size)
+	expected := []string{`hello 1`, `hello 2`, `hello 3`}
+	if !slices.Equal(processor.Messages(), expected) {
+		t.Fatalf(`expected %v but got %v`, expected, processor.Messages())
 	}
 }

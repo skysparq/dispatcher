@@ -15,7 +15,7 @@ type ChanSource[T any] struct {
 	mutex    sync.Mutex
 }
 
-func NewChanSource[T any](messageChan chan T) *ChanSource[T] {
+func NewChanSource[T any](messageChan chan []T) *ChanSource[T] {
 	source := &ChanSource[T]{
 		messages: make([]T, 0, 100),
 	}
@@ -42,10 +42,10 @@ func (a *ChanSource[T]) Receive(ctx context.Context) ([]T, error) {
 	return result, nil
 }
 
-func (a *ChanSource[T]) start(messageChan chan T) {
+func (a *ChanSource[T]) start(messageChan chan []T) {
 	for message := range messageChan {
 		a.mutex.Lock()
-		a.messages = append(a.messages, message)
+		a.messages = append(a.messages, message...)
 		a.mutex.Unlock()
 	}
 }
