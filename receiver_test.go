@@ -2,10 +2,11 @@ package receiver_test
 
 import (
 	"context"
-	dispatcher "dispatcher"
 	"sync"
 	"testing"
 	"time"
+
+	dispatcher "github.com/skysparq/dispatcher"
 )
 
 type TestProcessor struct {
