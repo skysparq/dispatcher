@@ -16,7 +16,7 @@ type Source[T any] struct {
 	message types.Message
 }
 
-func NewAwsSource[T any](queueUrl *string, maxMessages int32) *Source[T] {
+func NewAwsSource[T any](queueUrl *string) *Source[T] {
 	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		panic(fmt.Sprintf(`error creating AWS source: %v`, err))
