@@ -49,7 +49,7 @@ func (f *Receiver[T]) work(ctx context.Context, source Source[T], processor Proc
 		if ctx.Err() != nil {
 			break
 		}
-		message, err := source.Receive(ctx)
+		messages, err := source.Receive(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
 				break
@@ -58,7 +58,12 @@ func (f *Receiver[T]) work(ctx context.Context, source Source[T], processor Proc
 			time.Sleep(10 * time.Second)
 			continue
 		}
-		messageErrs, err := processor.Process(message)
+
+		if len(messages) == 0 {
+			continue
+		}
+
+		messageErrs, err := processor.Process(messages)
 		if err != nil {
 			f.logger.Errorf(`error processing messages: %v`, err)
 			continue
