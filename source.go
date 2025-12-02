@@ -6,8 +6,8 @@ import (
 )
 
 type Source[T any] interface {
-	Receive(context.Context) (T, error)
-	Clear() error
+	Receive(context.Context) ([]T, error)
+	ClearExcept([]RecordError) error
 }
 
 type ChanSource[T any] struct {
@@ -22,16 +22,16 @@ func NewChanSource[T any](messageChan chan T) *ChanSource[T] {
 	return source
 }
 
-func (a *ChanSource[T]) Receive(ctx context.Context) (T, error) {
+func (a *ChanSource[T]) Receive(ctx context.Context) ([]T, error) {
 	var result T
 	select {
 	case <-ctx.Done():
-		return result, ctx.Err()
+		return nil, ctx.Err()
 	case result = <-a.message:
-		return result, nil
+		return []T{result}, nil
 	}
 }
 
-func (a *ChanSource[T]) Clear() error {
+func (a *ChanSource[T]) ClearExcept(_ []RecordError) error {
 	return nil
 }

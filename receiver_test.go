@@ -19,15 +19,17 @@ func NewTestProcessor() *TestProcessor {
 	return processor
 }
 
-func (t *TestProcessor) Process(msg string) error {
-	t.Messages = append(t.Messages, msg)
-	return nil
+func (t *TestProcessor) Process(msgs []string) ([]dispatcher.RecordError, error) {
+	for _, msg := range msgs {
+		t.Messages = append(t.Messages, msg)
+	}
+	return nil, nil
 }
 
 func TestReceiver(t *testing.T) {
 	processor := NewTestProcessor()
 	incoming := make(chan string)
-	source := dispatcher.NewChanSource(incoming)
+	source := dispatcher.NewChanSource[string](incoming)
 	worker := &dispatcher.Worker[string]{
 		Source:    source,
 		Processor: processor,
