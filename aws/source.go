@@ -11,8 +11,9 @@ import (
 )
 
 type Source[T any] struct {
-	client *sqs.Client
-	params *sqs.ReceiveMessageInput
+	client  *sqs.Client
+	params  *sqs.ReceiveMessageInput
+	message types.Message
 }
 
 func NewAwsSource[T any](queueUrl *string, maxMessages int32) *Source[T] {
@@ -24,42 +25,32 @@ func NewAwsSource[T any](queueUrl *string, maxMessages int32) *Source[T] {
 		client: sqs.NewFromConfig(cfg),
 		params: &sqs.ReceiveMessageInput{
 			QueueUrl:            queueUrl,
-			MaxNumberOfMessages: maxMessages,
+			MaxNumberOfMessages: 1,
 			WaitTimeSeconds:     20,
 		},
 	}
 }
 
-func (a *Source[T]) Receive(ctx context.Context) ([]T, error) {
-	result, err := a.client.ReceiveMessage(ctx, a.params)
+func (a *Source[T]) Receive(ctx context.Context) (T, error) {
+	var result T
+	msg, err := a.client.ReceiveMessage(ctx, a.params)
 	if err != nil {
-		return nil, fmt.Errorf(`error receiving AWS messages: %w`, err)
+		return result, fmt.Errorf(`error receiving AWS messages: %w`, err)
 	}
+	a.message = msg.Messages[0]
+	result, err = decodeMessageBody[T](a.message.Body)
+	return result, nil
+}
 
-	payloads := make([]T, 0, len(result.Messages))
-	deletes := make([]types.DeleteMessageBatchRequestEntry, 0, len(result.Messages))
-	for _, message := range result.Messages {
-		deletes = append(deletes, types.DeleteMessageBatchRequestEntry{
-			Id:            message.MessageId,
-			ReceiptHandle: message.ReceiptHandle,
-		})
-
-		path, err := decodeMessageBody[T](message.Body)
-		if err != nil {
-			return nil, fmt.Errorf(`error receiving AWS messages: error decoding message body: %w`, err)
-		}
-		payloads = append(payloads, path)
+func (a *Source[T]) Clear() error {
+	_, err := a.client.DeleteMessage(context.Background(), &sqs.DeleteMessageInput{
+		ReceiptHandle: a.message.ReceiptHandle,
+		QueueUrl:      a.params.QueueUrl,
+	})
+	if err != nil {
+		return fmt.Errorf(`error clearing messages: %w`, err)
 	}
-	if len(deletes) > 0 {
-		_, err = a.client.DeleteMessageBatch(context.Background(), &sqs.DeleteMessageBatchInput{
-			Entries:  deletes,
-			QueueUrl: a.params.QueueUrl,
-		})
-		if err != nil {
-			return nil, fmt.Errorf(`error receiving AWS messages: error deleting messages: %w`, err)
-		}
-	}
-	return payloads, nil
+	return nil
 }
 
 func decodeMessageBody[T any](body *string) (T, error) {
