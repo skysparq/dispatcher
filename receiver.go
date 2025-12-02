@@ -54,13 +54,18 @@ func (f *Receiver[T]) work(ctx context.Context, source Source[T], processor Proc
 			if ctx.Err() != nil {
 				break
 			}
-			f.logger.Errorf(`error receiving messages: %v`, err)
+			f.logger.Errorf(`error receiving message: %v`, err)
 			time.Sleep(10 * time.Second)
 			continue
 		}
 		err = processor.Process(message)
 		if err != nil {
 			f.logger.Errorf(`error processing message: %v`, err)
+			continue
+		}
+		err = source.Clear()
+		if err != nil {
+			f.logger.Errorf(`error clearing message: %v`, err)
 		}
 	}
 	close(stopped)

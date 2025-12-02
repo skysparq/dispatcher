@@ -7,7 +7,7 @@ import (
 
 type Source[T any] interface {
 	Receive(context.Context) (T, error)
-	Clear([]error) error
+	Clear() error
 }
 
 type ChanSource[T any] struct {
@@ -32,6 +32,6 @@ func (a *ChanSource[T]) Receive(ctx context.Context) (T, error) {
 	}
 }
 
-func (a *ChanSource[T]) Clear(_ []error) error {
+func (a *ChanSource[T]) Clear() error {
 	return nil
 }
