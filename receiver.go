@@ -2,17 +2,15 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"time"
 )
-
-type Logger interface {
-	Errorf(format string, args ...interface{})
-}
 
 type Receiver[T any] struct {
 	workers []*Worker[T]
 	stopped []chan bool
-	logger  Logger
+	logger  *slog.Logger
 }
 
 type Worker[T any] struct {
@@ -20,7 +18,7 @@ type Worker[T any] struct {
 	Processor Processor[T]
 }
 
-func NewReceiver[T any](workers []*Worker[T], logger Logger) *Receiver[T] {
+func NewReceiver[T any](workers []*Worker[T], logger *slog.Logger) *Receiver[T] {
 	stopped := make([]chan bool, 0, len(workers))
 	for range workers {
 		stopped = append(stopped, make(chan bool))
@@ -54,7 +52,7 @@ func (f *Receiver[T]) work(ctx context.Context, source Source[T], processor Proc
 			if ctx.Err() != nil {
 				break
 			}
-			f.logger.Errorf(`error receiving messages: %v`, err)
+			f.logger.Error(fmt.Sprintf(`error receiving messages: %v`, err))
 			time.Sleep(10 * time.Second)
 			continue
 		}
@@ -65,15 +63,15 @@ func (f *Receiver[T]) work(ctx context.Context, source Source[T], processor Proc
 
 		messageErrs, err := processor.Process(messages)
 		if err != nil {
-			f.logger.Errorf(`error processing messages: %v`, err)
+			f.logger.Error(fmt.Sprintf(`error processing messages: %v`, err))
 			continue
 		}
 		for _, msgErr := range messageErrs {
-			f.logger.Errorf(`error processing message %v: %v`, msgErr.Index, msgErr.Error)
+			f.logger.Error(fmt.Sprintf(`error processing message %v: %v`, msgErr.Index, msgErr.Error))
 		}
 		err = source.ClearExcept(messageErrs)
 		if err != nil {
-			f.logger.Errorf(`error clearing messages: %v`, err)
+			f.logger.Error(fmt.Sprintf(`error clearing messages: %v`, err))
 		}
 	}
 	close(stopped)

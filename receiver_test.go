@@ -2,6 +2,7 @@ package dispatcher_test
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestReceiver(t *testing.T) {
 		Source:    source,
 		Processor: processor,
 	}
-	r := dispatcher.NewReceiver([]*dispatcher.Worker[string]{worker}, &dispatcher.StandardLogger{})
+	r := dispatcher.NewReceiver([]*dispatcher.Worker[string]{worker}, slog.Default())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go r.Start(ctx)
